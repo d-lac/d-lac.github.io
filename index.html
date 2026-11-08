@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DAVID // INVERTED PERSPECTIVES — Wing-Walker, Builder, Creator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,700&family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="inverted-world">
+  <!-- Interactive 3D & Particle Sky/Ocean Canvas -->
+  <canvas id="flight-canvas"></canvas>
+
+  <!-- Subtle Vignette & Scanline Overlay -->
+  <div class="hud-vignette"></div>
+
+  <!-- Top Telemetry Bar -->
+  <header class="telemetry-bar">
+    <div class="telemetry-group">
+      <span class="status-dot"></span>
+      <span class="telemetry-label">CALLSIGN:</span>
+      <span class="telemetry-value">DAVID // EXP-01</span>
+    </div>
+
+    <div class="telemetry-center">
+      <div class="compass-strip">
+        <div class="compass-track" id="compass-track">
+          <span>240</span><span>255</span><span>W</span><span>285</span><span>300</span>
+          <span>315</span><span>330</span><span>345</span><span class="cardinal">N</span><span>015</span>
+          <span>030</span><span>045</span><span>060</span><span>E</span><span>105</span>
+          <span>120</span><span>135</span><span>150</span><span>165</span><span class="cardinal">S</span>
+        </div>
+        <div class="compass-lubber">▼</div>
+      </div>
+    </div>
+
+    <div class="telemetry-group telemetry-right">
+      <div class="readout-pill">
+        <span class="telemetry-label">ATTITUDE</span>
+        <span class="telemetry-value accent-amber" id="roll-readout">ROLL -166°</span>
+      </div>
+      <div class="readout-pill">
+        <span class="telemetry-label">LOAD</span>
+        <span class="telemetry-value accent-crimson" id="g-readout">-1.8 G</span>
+      </div>
+      <button id="barrel-roll-btn" class="hud-action-btn" title="Flip the horizon (Spacebar)">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+          <path d="M3 3v5h5" />
+          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+          <path d="M16 16h5v5" />
+        </svg>
+        <span>BARREL ROLL</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Left HUD Ladder: Airspeed (KIAS) & Throttle -->
+  <aside class="hud-ladder hud-left" aria-label="Airspeed Indicator">
+    <div class="ladder-title">KIAS</div>
+    <div class="ladder-window">
+      <div class="ladder-tape" id="speed-tape"></div>
+      <div class="ladder-pointer">
+        <span id="speed-value">138</span>
+      </div>
+    </div>
+    <div class="throttle-control">
+      <label for="throttle-slider" class="telemetry-label">PROP RPM</label>
+      <input type="range" id="throttle-slider" min="800" max="2400" value="1850" />
+      <span class="telemetry-value" id="rpm-readout">1850 RPM</span>
+    </div>
+  </aside>
+
+  <!-- Right HUD Ladder: Altimeter (FT MSL) -->
+  <aside class="hud-ladder hud-right" aria-label="Altimeter">
+    <div class="ladder-title">ALT FT</div>
+    <div class="ladder-window">
+      <div class="ladder-tape" id="alt-tape"></div>
+      <div class="ladder-pointer">
+        <span id="alt-value">4,250</span>
+      </div>
+    </div>
+    <div class="telemetry-mini">
+      <span class="telemetry-label">STRUT TENSION</span>
+      <div class="tension-bar"><div class="tension-fill" id="tension-fill"></div></div>
+      <span class="telemetry-value" id="wind-audio-toggle" role="button" tabindex="0">SOUND: OFF</span>
+    </div>
+  </aside>
+
+  <!-- Center Reticle / Artificial Horizon Overlay -->
+  <div class="reticle-overlay" id="reticle-overlay" aria-hidden="true">
+    <svg class="pitch-ladder-svg" viewBox="-120 -120 240 240">
+      <!-- Fixed aircraft reference symbol -->
+      <path class="aircraft-symbol" d="M-35,0 L-12,0 L-6,8 L0,0 L6,8 L12,0 L35,0" />
+      <circle cx="0" cy="0" r="2.5" class="aircraft-dot" />
+      <!-- Dynamic rotating horizon ring -->
+      <g id="hud-horizon-ring">
+        <line x1="-90" y1="0" x2="-45" y2="0" class="horizon-tick" />
+        <line x1="45" y1="0" x2="90" y2="0" class="horizon-tick" />
+        <line x1="-25" y1="-35" x2="25" y2="-35" class="pitch-bar" />
+        <line x1="-25" y1="35" x2="25" y2="35" class="pitch-bar dashed" />
+        <polygon points="0,-95 -5,-85 5,-85" class="roll-pointer" />
+      </g>
+    </svg>
+  </div>
+
+  <!-- Main Content Overlay -->
+  <main class="cockpit-stage">
+    <!-- Hero Identity Block -->
+    <section class="hero-card" id="hero-card">
+      <div class="badge-row">
+        <span class="aero-badge">STEARMAN N450 // WING RIG</span>
+        <span class="aero-badge live-badge" id="flight-mode-badge">INVERTED FLIGHT</span>
+      </div>
+
+      <h1 class="hero-title">
+        COMFORTABLE AT<br />
+        <span class="stroke-text">4,000 FEET</span>
+        <span class="accent-text" id="upside-down-word">UPSIDE DOWN.</span>
+      </h1>
+
+      <p class="hero-bio">
+        I'm <strong>David</strong> — an engineer, builder, and literal wing-walker.
+        Whether I'm strapped to the top wing of an inverted biplane over the coast or architecting
+        ambitious software and hardware experiments from scratch, I live for high-consequence engineering
+        and unconventional perspectives.
+      </p>
+
+      <!-- Interactive Persona / Telemetry Tabs -->
+      <div class="telemetry-tabs" role="tablist">
+        <button class="tab-chip active" data-mode="wingwalker" role="tab" aria-selected="true">
+          <span class="chip-code">01</span> THE WING-WALKER
+        </button>
+        <button class="tab-chip" data-mode="engineer" role="tab" aria-selected="false">
+          <span class="chip-code">02</span> THE BUILDER
+        </button>
+        <button class="tab-chip" data-mode="creator" role="tab" aria-selected="false">
+          <span class="chip-code">03</span> THE STORYTELLER
+        </button>
+      </div>
+
+      <div class="tab-readout" id="tab-readout">
+        <p id="tab-text">
+          <strong>[LOG // AEROBATIC]</strong> Standing on a silver airfoil at 140 MPH while the Pacific Ocean hangs above your head teaches you a lot about trust in physics, rigging, and preparation.
+        </p>
+      </div>
+    </section>
+
+    <!-- Primary Destination Links (YouTube & GitHub) -->
+    <section class="destinations-grid" aria-label="Primary Channels">
+      <!-- YouTube Card -->
+      <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" class="channel-card yt-card" id="yt-link">
+        <div class="card-corner tl"></div>
+        <div class="card-corner tr"></div>
+        <div class="card-corner bl"></div>
+        <div class="card-corner br"></div>
+
+        <div class="card-header">
+          <span class="channel-freq">CH-01 // VIDEO TELEMETRY</span>
+          <span class="channel-status">● ON AIR</span>
+        </div>
+
+        <div class="card-body">
+          <div class="channel-icon yt-icon">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
+              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+            </svg>
+          </div>
+          <div class="channel-info">
+            <h2>YOUTUBE CHANNEL</h2>
+            <p>Deep dives, wild builds, flight logs, and experiments brought to life on camera.</p>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <span class="cta-label">WATCH THE BUILDS &amp; FLIGHTS</span>
+          <span class="cta-arrow">→</span>
+        </div>
+      </a>
+
+      <!-- GitHub Card -->
+      <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="channel-card gh-card" id="gh-link">
+        <div class="card-corner tl"></div>
+        <div class="card-corner tr"></div>
+        <div class="card-corner bl"></div>
+        <div class="card-corner br"></div>
+
+        <div class="card-header">
+          <span class="channel-freq">CH-02 // SOURCE REPOSITORY</span>
+          <span class="channel-status">● COMMITTED</span>
+        </div>
+
+        <div class="card-body">
+          <div class="channel-icon gh-icon">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
+              <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+            </svg>
+          </div>
+          <div class="channel-info">
+            <h2>GITHUB PROFILE</h2>
+            <p>Open-source code, schematics, tools, and the raw engineering under the hood.</p>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <span class="cta-label">INSPECT THE CODEBASE</span>
+          <span class="cta-arrow">→</span>
+        </div>
+      </a>
+    </section>
+  </main>
+
+  <!-- Bottom Flight Controls Help Bar -->
+  <footer class="cockpit-footer">
+    <div class="control-hint">
+      <kbd>MOUSE</kbd> BANK &amp; PITCH AIRCRAFT
+    </div>
+    <div class="control-hint">
+      <kbd>CLICK RIGGING</kbd> PLUCK FLYING WIRES
+    </div>
+    <div class="control-hint">
+      <kbd>SPACE</kbd> BARREL ROLL (INVERT / UPRIGHT)
+    </div>
+    <div class="control-hint">
+      <kbd>SCROLL</kbd> THROTTLE BOOST
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
+
