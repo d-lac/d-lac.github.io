@@ -1,14 +1,15 @@
 /**
  * DAVID // INVERTED PERSPECTIVES
- * Custom Interactive Procedural Canvas & HUD Flight Controller
- * Inspired by inverted Stearman biplane wing-walking over a coastal horizon
+ * Section 1: Stearman Biplane Cockpit Analog Gauges & Avionics
+ * Section 2: Mobile- & Desktop-Compatible Wing-Walker Flight Simulator
  */
 
 (() => {
+  const simViewport = document.getElementById('sim-viewport');
   const canvas = document.getElementById('flight-canvas');
   const ctx = canvas.getContext('2d');
 
-  // HUD DOM Elements
+  // Cockpit & Simulator DOM Elements
   const rollReadout = document.getElementById('roll-readout');
   const gReadout = document.getElementById('g-readout');
   const barrelRollBtn = document.getElementById('barrel-roll-btn');
@@ -16,33 +17,20 @@
   const rpmReadout = document.getElementById('rpm-readout');
   const speedValue = document.getElementById('speed-value');
   const altValue = document.getElementById('alt-value');
-  const speedTape = document.getElementById('speed-tape');
-  const altTape = document.getElementById('alt-tape');
   const compassTrack = document.getElementById('compass-track');
   const hudHorizonRing = document.getElementById('hud-horizon-ring');
   const flightModeBadge = document.getElementById('flight-mode-badge');
   const tensionFill = document.getElementById('tension-fill');
   const windAudioToggle = document.getElementById('wind-audio-toggle');
-  const tabChips = document.querySelectorAll('.tab-chip');
+  const toggleSwitches = document.querySelectorAll('.toggle-switch');
   const tabText = document.getElementById('tab-text');
 
-  // Populate HUD Tapes
-  function initLadders() {
-    let speedHTML = '';
-    for (let s = 220; s >= 60; s -= 10) {
-      speedHTML += `<div class="ladder-tick"><span>${s}</span></div>`;
-    }
-    speedTape.innerHTML = speedHTML;
+  // Stearman Analog Gauge Needles / Dials
+  const cockpitHorizonDial = document.getElementById('cockpit-horizon-dial');
+  const airspeedNeedle = document.getElementById('airspeed-needle');
+  const gforceNeedle = document.getElementById('gforce-needle');
 
-    let altHTML = '';
-    for (let a = 5500; a >= 2500; a -= 250) {
-      altHTML += `<div class="ladder-tick"><span>${a}</span></div>`;
-    }
-    altTape.innerHTML = altHTML;
-  }
-  initLadders();
-
-  // Persona Tab Data
+  // Persona Switcher Data
   const personaModes = {
     wingwalker: {
       text: '<strong>[LOG // AEROBATIC]</strong> Standing on a silver airfoil at 140 MPH while the Pacific Ocean hangs above your head teaches you a lot about trust in physics, rigging, and preparation.',
@@ -52,46 +40,46 @@
     engineer: {
       text: '<strong>[LOG // SYSTEMS]</strong> From low-level code to physical hardware rigs, I build systems that hold together under high G-loads. Clean architecture, zero duct tape.',
       targetRollDeg: -178,
-      rpm: 2100
+      rpm: 2150
     },
     creator: {
-      text: '<strong>[LOG // BROADCAST]</strong> Sharing the entire process — the prototypes, the math, the failures, and the final flight test — on YouTube and open-sourcing the code on GitHub.',
-      targetRollDeg: -158,
+      text: '<strong>[LOG // BROADCAST]</strong> Sharing the entire process — the prototypes, the math, the failures, and the final flight test — on YouTube, open-sourcing on GitHub, and connecting on LinkedIn.',
+      targetRollDeg: -156,
       rpm: 1950
     }
   };
 
-  tabChips.forEach((chip) => {
-    chip.addEventListener('click', () => {
-      tabChips.forEach((c) => {
-        c.classList.remove('active');
-        c.setAttribute('aria-selected', 'false');
+  toggleSwitches.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      toggleSwitches.forEach((b) => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
       });
-      chip.classList.add('active');
-      chip.setAttribute('aria-selected', 'true');
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
 
-      const mode = personaModes[chip.dataset.mode];
+      const mode = personaModes[btn.dataset.mode];
       if (mode) {
         tabText.innerHTML = mode.text;
         state.baseRollDeg = state.isInverted ? mode.targetRollDeg : (mode.targetRollDeg + 180);
         throttleSlider.value = mode.rpm;
         state.targetRpm = mode.rpm;
-        pluckAllWires(0.45);
+        pluckAllWires(0.5);
       }
     });
   });
 
-  // Flight & World State
+  // Flight & Simulator State
   const state = {
-    width: window.innerWidth,
-    height: window.innerHeight,
-    mouseX: 0, // normalized -1 to 1
-    mouseY: 0, // normalized -1 to 1
-    rawMouseX: window.innerWidth * 0.5,
-    rawMouseY: window.innerHeight * 0.5,
+    width: 800,
+    height: 580,
+    mouseX: 0, // normalized -1 to 1 inside simulator
+    mouseY: 0, // normalized -1 to 1 inside simulator
+    rawMouseX: 400,
+    rawMouseY: 290,
 
     isInverted: true,
-    baseRollDeg: -166, // matches the iconic diagonal horizon from the inspiration photo
+    baseRollDeg: -166, // Iconic inverted coastal horizon tilt
     currentRollDeg: -166,
     pitchOffset: 0,
 
@@ -119,7 +107,6 @@
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     audioCtx = new AudioContextClass();
 
-    // Subtle radial engine drone
     engineOsc = audioCtx.createOscillator();
     const subOsc = audioCtx.createOscillator();
     const filter = audioCtx.createBiquadFilter();
@@ -132,7 +119,6 @@
 
     filter.type = 'lowpass';
     filter.frequency.value = 180;
-
     engineGain.gain.value = 0.0;
 
     engineOsc.connect(filter);
@@ -174,24 +160,24 @@
     }
   });
 
-  // Initialize particles
+  // Initialize Particles
   function initParticles() {
     state.windParticles = [];
-    for (let i = 0; i < 65; i++) {
+    for (let i = 0; i < 60; i++) {
       state.windParticles.push({
-        x: (Math.random() - 0.5) * 2200,
-        y: (Math.random() - 0.5) * 1400,
-        length: 40 + Math.random() * 110,
+        x: (Math.random() - 0.5) * 2000,
+        y: (Math.random() - 0.5) * 1200,
+        length: 40 + Math.random() * 100,
         speed: 8 + Math.random() * 14,
         alpha: 0.06 + Math.random() * 0.22
       });
     }
 
     state.seaSparkles = [];
-    for (let i = 0; i < 90; i++) {
+    for (let i = 0; i < 80; i++) {
       state.seaSparkles.push({
-        x: (Math.random() - 0.5) * 2400,
-        y: 30 + Math.random() * 550,
+        x: (Math.random() - 0.5) * 2000,
+        y: 25 + Math.random() * 500,
         size: 1 + Math.random() * 2.5,
         phase: Math.random() * Math.PI * 2
       });
@@ -220,10 +206,11 @@
     if (state.wires[0]) playWirePluck(240);
   }
 
-  // Resize handler
+  // Resize simulator canvas to match #sim-viewport container
   function handleResize() {
-    state.width = window.innerWidth;
-    state.height = window.innerHeight;
+    const rect = simViewport.getBoundingClientRect();
+    state.width = rect.width || window.innerWidth;
+    state.height = rect.height || 500;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = state.width * dpr;
     canvas.height = state.height * dpr;
@@ -234,12 +221,45 @@
   initParticles();
   initRiggingWires();
 
-  // Input listeners
-  window.addEventListener('mousemove', (e) => {
-    state.rawMouseX = e.clientX;
-    state.rawMouseY = e.clientY;
-    state.mouseX = (e.clientX / state.width) * 2 - 1;
-    state.mouseY = (e.clientY / state.height) * 2 - 1;
+  // Unified Pointer (Mouse + Touch) Handler inside Simulator Viewport
+  function updatePointerFromEvent(e) {
+    const rect = simViewport.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    const localX = clientX - rect.left;
+    const localY = clientY - rect.top;
+
+    state.rawMouseX = localX;
+    state.rawMouseY = localY;
+    state.mouseX = Math.max(-1, Math.min(1, (localX / state.width) * 2 - 1));
+    state.mouseY = Math.max(-1, Math.min(1, (localY / state.height) * 2 - 1));
+  }
+
+  simViewport.addEventListener('pointermove', (e) => {
+    updatePointerFromEvent(e);
+  });
+
+  simViewport.addEventListener('pointerdown', (e) => {
+    updatePointerFromEvent(e);
+
+    const planePos = getPlaneAnchor();
+    const localX = (state.rawMouseX - planePos.x) / planePos.scale;
+    const localY = (state.rawMouseY - planePos.y) / planePos.scale;
+
+    let pluckedAny = false;
+    state.wires.forEach((w) => {
+      const d = distToSegment(localX, localY, w.x1, w.y1, w.x2, w.y2);
+      if (d < 45) {
+        w.vel = 22;
+        pluckedAny = true;
+        playWirePluck(w.freq);
+      }
+    });
+
+    if (!pluckedAny) {
+      pluckAllWires(0.75);
+    }
   });
 
   // Toggle Barrel Roll (Invert vs Upright)
@@ -263,7 +283,7 @@
 
   barrelRollBtn.addEventListener('click', triggerBarrelRoll);
   window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space' && document.activeElement !== barrelRollBtn) {
+    if (e.code === 'Space' && document.activeElement.tagName !== 'BUTTON') {
       e.preventDefault();
       triggerBarrelRoll();
     }
@@ -272,11 +292,6 @@
   throttleSlider.addEventListener('input', (e) => {
     state.targetRpm = Number(e.target.value);
   });
-
-  window.addEventListener('wheel', (e) => {
-    state.targetRpm = Math.max(800, Math.min(2400, state.targetRpm - e.deltaY * 0.4));
-    throttleSlider.value = Math.round(state.targetRpm);
-  }, { passive: true });
 
   // Distance from point to segment for wire plucking
   function distToSegment(px, py, x1, y1, x2, y2) {
@@ -287,33 +302,17 @@
     return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
   }
 
-  // Click canvas to pluck nearby flying wires or trigger a gust
-  canvas.addEventListener('pointerdown', (e) => {
-    const planePos = getPlaneAnchor();
-    const localX = (e.clientX - planePos.x) / planePos.scale;
-    const localY = (e.clientY - planePos.y) / planePos.scale;
-
-    let pluckedAny = false;
-    state.wires.forEach((w) => {
-      const d = distToSegment(localX, localY, w.x1, w.y1, w.x2, w.y2);
-      if (d < 42) {
-        w.vel = 22;
-        pluckedAny = true;
-        playWirePluck(w.freq);
-      }
-    });
-
-    if (!pluckedAny) {
-      pluckAllWires(0.75);
-    }
-  });
-
   function getPlaneAnchor() {
-    const scale = Math.min(state.width / 1280, state.height / 820) * 0.92;
+    // Center the Stearman cleanly on both wide desktops and narrow mobile screens
+    const isMobile = state.width < 680;
+    const scale = isMobile
+      ? Math.max(0.42, state.width / 760)
+      : Math.min(state.width / 1100, state.height / 640) * 0.95;
+
     return {
-      x: state.width * 0.56 + state.mouseX * 22,
-      y: state.height * 0.54 + state.mouseY * 18,
-      scale: Math.max(0.55, scale)
+      x: state.width * (isMobile ? 0.48 : 0.52) + state.mouseX * 20,
+      y: state.height * 0.55 + state.mouseY * 16,
+      scale
     };
   }
 
@@ -329,7 +328,7 @@
 
     const span = Math.hypot(state.width, state.height) * 1.6;
 
-    // 1. Sky Hemisphere (negative Y in local unrotated space, so when roll = -166 deg, it sits at the bottom!)
+    // 1. Sky Hemisphere
     const skyGrad = ctx.createLinearGradient(0, 0, 0, -span * 0.65);
     skyGrad.addColorStop(0, '#d8ecfa');
     skyGrad.addColorStop(0.25, '#8ec2eb');
@@ -338,7 +337,7 @@
     ctx.fillStyle = skyGrad;
     ctx.fillRect(-span, -span, span * 2, span);
 
-    // Subtle atmospheric cloud wisps in the sky
+    // Subtle atmospheric cloud wisps
     ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
     for (let i = -3; i <= 3; i++) {
       const cloudX = i * 320 + ((state.time * 18) % 320);
@@ -347,7 +346,7 @@
       ctx.fill();
     }
 
-    // 2. Deep Ocean Hemisphere (positive Y in local space -> sits at the top of the screen when inverted!)
+    // 2. Deep Ocean Hemisphere (Hangs at the top of the viewport when inverted!)
     const seaGrad = ctx.createLinearGradient(0, 0, 0, span * 0.65);
     seaGrad.addColorStop(0, '#133b54');
     seaGrad.addColorStop(0.2, '#0c283a');
@@ -356,8 +355,7 @@
     ctx.fillStyle = seaGrad;
     ctx.fillRect(-span, 0, span * 2, span);
 
-    // Ocean wave glints / texture lines
-    ctx.strokeStyle = 'rgba(182, 216, 242, 0.08)';
+    // Ocean wave glints
     ctx.lineWidth = 1;
     state.seaSparkles.forEach((s) => {
       const sx = ((s.x + state.time * 12) % 2000) - 1000;
@@ -369,10 +367,9 @@
       ctx.stroke();
     });
 
-    // 3. Coastal Mountain Wedge & Shoreline (Recreating the Santa Barbara / coastal ridge from the photo)
+    // 3. Coastal Mountain Wedge & Shoreline
     ctx.beginPath();
     ctx.moveTo(-span, 0);
-    // Mountain ridge profile dipping into the sea on the right
     ctx.lineTo(-900, -48);
     ctx.lineTo(-620, -64);
     ctx.lineTo(-350, -45);
@@ -388,7 +385,7 @@
     ctx.fillStyle = mountainGrad;
     ctx.fill();
 
-    // Coastal patchwork & ridges inside the landmass
+    // Coastal ridges
     ctx.strokeStyle = 'rgba(235, 218, 188, 0.32)';
     ctx.lineWidth = 1.4;
     for (let k = -800; k < 240; k += 85) {
@@ -406,7 +403,7 @@
     ctx.lineTo(350, 0);
     ctx.stroke();
 
-    // Crisp horizon atmospheric glow line
+    // Crisp horizon glow line
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
@@ -417,23 +414,22 @@
     ctx.restore();
   }
 
-  // Draw stylized vector Stearman Biplane & Wing-Walker silhouette in the foreground
+  // Draw stylized vector Stearman Biplane & Wing-Walker silhouette
   function drawBiplaneAndWalker() {
     const anchor = getPlaneAnchor();
     ctx.save();
     ctx.translate(anchor.x, anchor.y);
     ctx.scale(anchor.scale, anchor.scale);
 
-    // Slight aircraft response to mouse bank
-    const planeTilt = state.mouseX * 0.055;
+    const planeTilt = state.mouseX * 0.06;
     ctx.rotate(planeTilt);
 
-    // --- 1. HIGH-SPEED WIND STREAKS ---
+    // 1. HIGH-SPEED WIND STREAKS
     const speedFactor = state.rpm / 1850;
     ctx.lineWidth = 1.2;
     state.windParticles.forEach((p) => {
       p.x += p.speed * speedFactor;
-      if (p.x > 1100) p.x = -1100;
+      if (p.x > 1000) p.x = -1000;
       ctx.strokeStyle = `rgba(226, 232, 240, ${p.alpha})`;
       ctx.beginPath();
       ctx.moveTo(p.x, p.y);
@@ -441,7 +437,7 @@
       ctx.stroke();
     });
 
-    // --- 2. LOWER WING (Appears at bottom-right in the photo) ---
+    // 2. LOWER WING
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(30, 125);
@@ -457,7 +453,6 @@
     ctx.fillStyle = lowerWingGrad;
     ctx.fill();
 
-    // Black racing stripes on lower wing
     ctx.fillStyle = '#0b0f17';
     ctx.beginPath();
     ctx.moveTo(95, 155);
@@ -468,9 +463,8 @@
     ctx.fill();
     ctx.restore();
 
-    // --- 3. LANDING GEAR STRUT & WHEEL (Pointing down into sky while inverted) ---
+    // 3. LANDING GEAR STRUT & WHEEL
     ctx.save();
-    // Wheel tire
     ctx.fillStyle = '#0f172a';
     ctx.beginPath();
     ctx.arc(-112, 206, 24, 0, Math.PI * 2);
@@ -478,13 +472,12 @@
     ctx.lineWidth = 3;
     ctx.strokeStyle = '#334155';
     ctx.stroke();
-    // Chrome wheel hub
+
     ctx.fillStyle = '#cbd5e1';
     ctx.beginPath();
     ctx.arc(-112, 206, 10, 0, Math.PI * 2);
     ctx.fill();
 
-    // Main oleo strut fairing
     ctx.fillStyle = '#090d14';
     ctx.strokeStyle = '#475569';
     ctx.lineWidth = 1.5;
@@ -498,18 +491,15 @@
     ctx.stroke();
     ctx.restore();
 
-    // --- 4. OBSIDIAN FUSELAGE & RADIAL ENGINE COWLING ---
+    // 4. OBSIDIAN FUSELAGE & RADIAL ENGINE COWLING
     ctx.save();
     ctx.beginPath();
-    // Nose cowling curve
     ctx.moveTo(-215, 68);
     ctx.quadraticCurveTo(-235, 115, -205, 165);
     ctx.quadraticCurveTo(-165, 192, -95, 168);
-    // Taper toward tail on the right
     ctx.lineTo(395, 22);
     ctx.lineTo(415, -8);
     ctx.lineTo(135, 16);
-    // Cockpit cutout
     ctx.lineTo(105, 30);
     ctx.lineTo(52, 32);
     ctx.lineTo(35, 20);
@@ -526,7 +516,7 @@
     ctx.lineWidth = 1.2;
     ctx.stroke();
 
-    // Silver-white fuselage spear stripe with red trim (matching the black Stearman livery)
+    // Silver-white fuselage spear stripe with crimson trim
     ctx.beginPath();
     ctx.moveTo(-165, 142);
     ctx.lineTo(-125, 122);
@@ -540,22 +530,20 @@
     ctx.lineWidth = 1.4;
     ctx.stroke();
 
-    // Pilot silhouette in open cockpit
+    // Pilot in open cockpit
     ctx.fillStyle = '#1e293b';
     ctx.beginPath();
     ctx.arc(82, 16, 13, 0, Math.PI * 2);
     ctx.fill();
-    // Pilot goggles glint
     ctx.fillStyle = '#ff9f1c';
     ctx.fillRect(71, 12, 9, 4);
     ctx.restore();
 
-    // --- 5. CHROME SPINNER & HIGH-RPM PROPELLER ---
+    // 5. CHROME SPINNER & HIGH-RPM PROPELLER
     ctx.save();
     ctx.translate(-225, 125);
     ctx.rotate(-0.18);
 
-    // Spinning prop motion-blur disc
     state.propAngle += (state.rpm / 60) * 0.25;
     const propBlurAlpha = Math.min(0.45, state.rpm / 4500);
     const propGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, 145);
@@ -569,7 +557,6 @@
     ctx.ellipse(0, 0, 26, 148, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Dynamic blade streaks
     for (let b = 0; b < 2; b++) {
       const ang = state.propAngle + b * Math.PI;
       const bladeY = Math.sin(ang) * 142;
@@ -581,7 +568,6 @@
       ctx.stroke();
     }
 
-    // Polished Chrome Nose Spinner Cone
     const spinnerGrad = ctx.createLinearGradient(-42, -18, 10, 22);
     spinnerGrad.addColorStop(0, '#ffffff');
     spinnerGrad.addColorStop(0.45, '#94a3b8');
@@ -595,12 +581,11 @@
     ctx.fill();
     ctx.restore();
 
-    // --- 6. WING-WALKER FIGURE & HARNESS RIG (Standing atop the upper wing!) ---
+    // 6. WING-WALKER FIGURE & HARNESS RIG
     ctx.save();
     const walkerSway = state.mouseX * 4;
     ctx.translate(-42 + walkerSway, -22);
 
-    // Vertical steel harness stanchion post
     ctx.strokeStyle = '#0f172a';
     ctx.lineWidth = 7;
     ctx.beginPath();
@@ -608,14 +593,12 @@
     ctx.lineTo(14, -105);
     ctx.stroke();
 
-    // Diagonal brace bar
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.moveTo(-26, 0);
     ctx.lineTo(10, -60);
     ctx.stroke();
 
-    // Wing-walker silhouette (Arms spread wide in the slipstream, matching the photo)
     // Legs
     ctx.strokeStyle = '#cbd5e1';
     ctx.lineWidth = 6.5;
@@ -633,35 +616,32 @@
     ctx.roundRect(-14, -92, 22, 38, 4);
     ctx.fill();
 
-    // Torso (Rust-crimson T-shirt catching the sun)
+    // Rust-crimson shirt
     ctx.fillStyle = '#d9534f';
     ctx.beginPath();
     ctx.roundRect(-15, -142, 24, 52, 6);
     ctx.fill();
 
-    // Harness waist belt
+    // Harness belt
     ctx.fillStyle = '#475569';
     ctx.fillRect(-16, -98, 26, 8);
 
-    // Outstretched arms welcoming the 140 MPH airflow
+    // Outstretched arms
     const armWave = Math.sin(state.time * 4) * 3;
     ctx.strokeStyle = '#f1f5f9';
     ctx.lineWidth = 5.5;
     ctx.beginPath();
-    // Left arm
     ctx.moveTo(-13, -132);
     ctx.lineTo(-42, -102 + armWave);
-    // Right arm
     ctx.moveTo(9, -132);
     ctx.lineTo(44, -112 - armWave);
     ctx.stroke();
 
-    // Head & Goggles looking into the wind
+    // Head & Goggles
     ctx.fillStyle = '#f1f5f9';
     ctx.beginPath();
     ctx.arc(-3, -156, 10.5, 0, Math.PI * 2);
     ctx.fill();
-    // Hair & Goggles strap
     ctx.fillStyle = '#0f172a';
     ctx.beginPath();
     ctx.arc(-1, -158, 10.5, -Math.PI * 0.85, Math.PI * 0.2);
@@ -670,7 +650,7 @@
     ctx.fillRect(-13, -160, 8, 4);
     ctx.restore();
 
-    // --- 7. SWEPT METALLIC SILVER TOP WING (Main horizontal airfoil across center) ---
+    // 7. SWEPT METALLIC SILVER TOP WING
     ctx.save();
     const wingGrad = ctx.createLinearGradient(0, -32, 0, 2);
     wingGrad.addColorStop(0, '#f8fafc');
@@ -687,7 +667,6 @@
     ctx.closePath();
     ctx.fill();
 
-    // Leading edge chrome specular highlight
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -696,9 +675,8 @@
     ctx.stroke();
     ctx.restore();
 
-    // --- 8. N-STRUTS & INTERACTIVE PLUCKABLE FLYING WIRES ---
+    // 8. N-STRUTS & INTERACTIVE PLUCKABLE FLYING WIRES
     ctx.save();
-    // Cabane & Interplane Struts
     ctx.strokeStyle = '#0f172a';
     ctx.lineWidth = 5;
     const struts = [
@@ -714,20 +692,17 @@
       ctx.stroke();
     });
 
-    // Pluckable tension wires (spring physics)
     let totalTensionEnergy = 0;
     const localMouseX = (state.rawMouseX - anchor.x) / anchor.scale;
     const localMouseY = (state.rawMouseY - anchor.y) / anchor.scale;
 
     state.wires.forEach((w) => {
-      // Check if cursor slices across wire
       const d = distToSegment(localMouseX, localMouseY, w.x1, w.y1, w.x2, w.y2);
       if (d < 16 && Math.abs(w.vel) < 4) {
         w.vel = (Math.random() > 0.5 ? 1 : -1) * 11;
         playWirePluck(w.freq);
       }
 
-      // Spring-damper integration
       const k = 0.28;
       const damp = 0.90;
       const accel = -k * w.vib;
@@ -747,25 +722,22 @@
     });
 
     const tensionPct = Math.min(100, Math.round(64 + totalTensionEnergy * 1.8));
-    tensionFill.style.width = `${tensionPct}%`;
+    if (tensionFill) tensionFill.style.width = `${tensionPct}%`;
     ctx.restore();
 
     ctx.restore();
   }
 
-  // Update HUD Readouts & Artificial Horizon
+  // Synchronize Cockpit Analog Gauges & Simulator HUD
   function updateTelemetry() {
-    // Smoothly interpolate roll & pitch toward cursor + base orientation
-    const targetRoll = state.baseRollDeg + state.mouseX * 14;
+    const targetRoll = state.baseRollDeg + state.mouseX * 16;
     state.currentRollDeg += (targetRoll - state.currentRollDeg) * 0.08;
 
-    const targetPitch = state.mouseY * 45;
+    const targetPitch = state.mouseY * 42;
     state.pitchOffset += (targetPitch - state.pitchOffset) * 0.08;
 
-    // Smooth RPM
     state.rpm += (state.targetRpm - state.rpm) * 0.1;
 
-    // Derived airspeed & G-load
     const targetSpeed = Math.round(95 + (state.rpm / 2400) * 68 - state.mouseY * 8);
     state.airspeed += (targetSpeed - state.airspeed) * 0.1;
 
@@ -773,7 +745,6 @@
     const dynamicG = baseG - state.mouseY * 0.6 + (Math.abs(state.mouseX) * 0.3);
     state.gForce += (dynamicG - state.gForce) * 0.1;
 
-    // Format roll angle into [-180, 180]
     let normRoll = ((state.currentRollDeg + 180) % 360 + 360) % 360 - 180;
     rollReadout.textContent = `ROLL ${normRoll >= 0 ? '+' : ''}${Math.round(normRoll)}°`;
     gReadout.textContent = `${state.gForce >= 0 ? '+' : ''}${state.gForce.toFixed(1)} G`;
@@ -781,26 +752,33 @@
     speedValue.textContent = Math.round(state.airspeed);
 
     const currentAlt = Math.round(state.altitude - state.pitchOffset * 4);
-    altValue.textContent = currentAlt.toLocaleString();
+    altValue.textContent = `${currentAlt.toLocaleString()} FT`;
 
-    // Animate HUD Ladders & Compass
-    const speedOffset = ((160 - state.airspeed) / 100) * 180;
-    speedTape.style.transform = `translateY(${speedOffset}px)`;
+    // Update Stearman Cockpit Analog Dials
+    if (cockpitHorizonDial) {
+      cockpitHorizonDial.style.transform = `rotate(${normRoll}deg) translateY(${state.mouseY * 8}px)`;
+    }
+    if (airspeedNeedle) {
+      // Map 80..180 KIAS to -110deg..+110deg
+      const speedDeg = ((state.airspeed - 130) / 50) * 95;
+      airspeedNeedle.style.transform = `rotate(${speedDeg}deg)`;
+    }
+    if (gforceNeedle) {
+      // Map -3G..+3G to needle angle
+      const gDeg = (state.gForce / 3) * 95;
+      gforceNeedle.style.transform = `rotate(${gDeg}deg)`;
+    }
 
-    const altOffset = ((4250 - currentAlt) / 1000) * 140;
-    altTape.style.transform = `translateY(${altOffset}px)`;
-
-    const compassShift = -120 + state.mouseX * 65;
+    // Update Simulator Compass & Center Reticle
+    const compassShift = -110 + state.mouseX * 60;
     compassTrack.style.transform = `translateX(${compassShift}px)`;
 
-    // Rotate center SVG reticle
     hudHorizonRing.setAttribute(
       'transform',
       `rotate(${normRoll}) translate(0, ${state.mouseY * 18})`
     );
   }
 
-  // Main Animation Loop
   function animate() {
     state.time += 0.016;
     ctx.clearRect(0, 0, state.width, state.height);
@@ -814,4 +792,3 @@
 
   requestAnimationFrame(animate);
 })();
-
